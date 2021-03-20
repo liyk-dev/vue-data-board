@@ -7,10 +7,10 @@
       </div>
       <div v-show="mode === 'edit'">
         <el-button type="primary" size="mini" @click="handleShare">
-          分享
+          {{ $t('common.share') }}
         </el-button>
         <el-button type="primary" size="mini" @click="handleLinkChart">
-          添加图表
+          {{ $t('dashboard.addChart') }}
         </el-button>
       </div>
     </div>
@@ -59,36 +59,36 @@
     </grid-layout>
     <div v-if="charts.length === 0 && mode === 'edit'" v-loading="loading" class="welcome-container">
       <el-button type="primary" size="mini" @click="handleLinkChart">
-        添加图表
+        {{ $t('dashboard.addChart') }}
       </el-button>
       <div>
         <el-link type="info" :underline="false">
           <router-link to="/chartpanel/create">
-            Dashboard Is Empty，Go Create Your First Chart!
+            {{ $t('dashboard.emptyDashboardTip') }}
           </router-link>
         </el-link>
       </div>
     </div>
-    <el-dialog title="我的图表" :visible.sync="showChartList">
+    <el-dialog :title="$t('chart.myChart')" :visible.sync="showChartList">
       <el-button type="primary" size="mini" @click="$router.push('/chartpanel/create')">
-        Create New Chart
+        {{ $t('chart.createNewChart') }}
       </el-button>
       <el-table :data="myChartList">
-        <el-table-column label="名称" width="200" prop="chart_name" />
-        <el-table-column label="描述" prop="desc" />
-        <el-table-column label="操作" align="center">
+        <el-table-column :label="$t('common.name')" width="200" prop="chart_name" />
+        <el-table-column :label="$t('common.desc')" prop="desc" />
+        <el-table-column :label="$t('common.operation')" align="center">
           <template slot-scope="scope">
             <el-button size="mini" type="primary" :disabled="isExisted(scope.row)" @click="linkChart(scope.row)">
-              添加
+              {{ $t('common.add') }}
             </el-button>
             <el-button size="mini" type="warning" @click="$router.push(`/chartpanel/${scope.row.chart_id}`)">
-              编辑
+              {{ $t('common.edit') }}
             </el-button>
           </template>
         </el-table-column>
       </el-table>
       <span slot="footer" class="dialog-footer">
-        <el-button type="primary" size="small" @click="showChartList = false">关 闭</el-button>
+        <el-button type="primary" size="small" @click="showChartList = false">{{ $t('common.close') }}</el-button>
       </span>
     </el-dialog>
   </div>
@@ -157,7 +157,7 @@ export default {
     }
   },
   watch: {
-    'dashboard.objectId': {
+    'dashboard.dashboard_id': {
       immediate: true,
       handler(value) {
         if (!value) return
@@ -170,14 +170,15 @@ export default {
       this.charts = []
       this.layout = []
       this.loading = true
-      chartByDashboard(this.dashboard.objectId).then(resp => {
+      chartByDashboard(this.dashboard.dashboard_id).then(resp => {
         this.loading = false
-        this.charts = resp.data
+        this.charts = resp.data || []
         let filterStrs = []
         const layout = (this.dashboard.content && this.dashboard.content.layout) || []
         this.charts.forEach((chart, index) => {
-          this.$set(this.results, chart.objectId, [])
-          this.$set(this.chartLoading, chart.objectId, false)
+          this.$set(this.results, chart.chart_id, [])
+          this.$set(this.chartLoading, chart.chart_id, false)
+          chart.content = JSON.parse(chart.content)
           chart.content.allSelected = []
           chart.content.allSelected = chart.content.allSelected.concat(chart.content.selectedCalcul).concat(chart.content.selectedDimension)
           if (chart.content.filters) {
@@ -192,18 +193,18 @@ export default {
             limit: chart.content.limit
           })
           this.exeSql(sqlSentence, chart, index)
-          if (!layout.find(layoutItem => layoutItem.id === chart.objectId)) {
+          if (!layout.find(layoutItem => layoutItem.id === chart.chart_id)) {
             this.generatePosition(chart, layout, index)
           }
         })
         this.layout = layout.filter(item => {
-          return this.charts.find(chart => chart.objectId === item.id)
+          return this.charts.find(chart => chart.chart_id === item.id)
         })
         this.handleLayoutChange()
       })
     },
     getChartItem(id) {
-      return this.charts.find(chart => chart.objectId === id)
+      return this.charts.find(chart => chart.chart_id === id)
     },
     handleCaculPos(layout) {
       // const layout = JSON.parse(JSON.stringify(layout))
@@ -228,12 +229,12 @@ export default {
       let posObj
       if (layout.length === 0) {
         posObj = {
-          id: chart.objectId,
+          id: chart.chart_id,
           x: 0,
           y: 0,
           w: 12,
           h: 9,
-          i: chart.objectId
+          i: chart.chart_id
         }
       } else {
         const bottomItems = this.handleCaculPos(layout)
@@ -244,12 +245,12 @@ export default {
           return result
         }, bottomItems[0])
         posObj = {
-          id: chart.objectId,
+          id: chart.chart_id,
           x: highestItem.x,
           y: highestItem.yOffSet,
           w: highestItem.w,
           h: 9,
-          i: chart.objectId
+          i: chart.chart_id
         }
       }
 
@@ -257,9 +258,9 @@ export default {
     },
     handleShare() {
       const h = this.$createElement
-      const link = `https://islasher.com/vue-data-board#/fullscreendb/${this.dashboard.objectId}`
+      const link = `http://${location.host}/fullscreendb/${this.dashboard.dashboard_id}`
       this.$msgbox({
-        title: '分享链接',
+        title: this.$t('dashboard.shareLink'),
         message: h('p', null, [
           h('a', { style: 'color: #205cd8', attrs: { href: link, target: '_blank' }}, link)
         ])
@@ -274,64 +275,66 @@ export default {
     linkChart(chart) {
       const data = {
         chart_id: chart.chart_id,
-        dashboard_id: this.dashboard.objectId
+        dashboard_id: this.dashboard.dashboard_id
       }
       addChartToDB(data).then(resp => {
         this.showChartList = false
         this.getList()
         this.$message({
           type: 'success',
-          message: '添加成功！'
+          message: this.$t('common.saveSuccess')
         })
       })
     },
     isExisted(chart) {
-      return this.charts.findIndex(item => item.objectId === chart.chart_id) >= 0
+      return this.charts.findIndex(item => item.chart_id === chart.chart_id) >= 0
     },
     handleEdit(chart) {
-      this.$router.push(`/chartpanel/${chart.objectId}`)
+      this.$router.push(`/chartpanel/${chart.chart_id}`)
     },
     handleDelete(chart) {
-      this.$confirm('该操作将从该 Dashboard 中删除该图表，并不会删除原图表，确认继续?', '提示', {
-        confirmButtonText: 'Confirm',
-        cancelButtonText: 'Cancel',
+      this.$confirm(this.$t('dashboard.removeChartConfirm'), this.$t('common.confirm'), {
         type: 'warning'
       }).then(() => {
         // deleteChart(index)
-        const deleteChartIndex = this.layout.findIndex(item => item.id === chart.objectId)
+        const deleteChartIndex = this.layout.findIndex(item => item.id === chart.chart_id)
         const layout = JSON.parse(JSON.stringify(this.layout))
         layout.splice(deleteChartIndex, 1)
         this.dashboard.content.layout = layout
         const data = {
-          chart_id: chart.objectId,
-          dashboard_id: this.dashboard.objectId
+          chart_id: chart.chart_id,
+          dashboard_id: this.dashboard.dashboard_id
         }
         Promise.all([updateDashboard(this.dashboard), unMapChartDb(data)]).then(resp => {
           this.getList()
           this.$message({
             type: 'success',
-            message: '删除成功!'
+            message: this.$t('common.deleteSuccess')
           })
         })
       })
     },
     handleLayoutChange() {
+      if (this.mode === 'view') return
       this.dashboard.content = this.dashboard.content || {}
       this.dashboard.content.layout = this.layout
-      updateDashboard(this.dashboard).then(() => {
-        console.log('layout saved')
-      })
+      updateDashboard(this.dashboard)
     },
     handleResize(i, newH, newW, newHPx, newWPx) {
       this.$refs[`chartInstance${i}`][0].$children[0].$emit('resized')
     },
     exeSql(sqlSentence, item, index) {
-      this.$set(this.chartLoading, item.objectId, true)
-      exeSql(sqlSentence).then(resp => {
-        this.$set(this.chartLoading, item.objectId, false)
-        this.$set(this.results, item.objectId, resp.data)
+      this.$set(this.chartLoading, item.chart_id, true)
+      if (!sqlSentence) {
+        this.$message.warning(this.$t('dashboard.chartQueryException', item.chart_name))
+        this.$set(this.chartLoading, item.chart_id, false)
+        return
+      }
+      exeSql().fetch({ source_id: item.source_id, sql: sqlSentence }).then(resp => {
+        this.$set(this.chartLoading, item.chart_id, false)
+        this.$set(this.results, item.chart_id, resp.data)
       }).catch(() => {
-        this.$set(this.chartLoading, item.objectId, false)
+        this.$set(this.chartLoading, item.chart_id, false)
       })
     }
   }

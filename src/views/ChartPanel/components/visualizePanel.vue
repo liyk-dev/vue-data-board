@@ -3,10 +3,10 @@
     <component :is="currentType.componentName" :data="chartData" :schema="schema" :chart-style="chartStyle" class="visualize-window" />
     <div v-if="isEditMode" class="chart-style-panel">
       <el-form label-position="top" size="mini">
-        <el-form-item label="图表类型:">
+        <el-form-item :label="$t('chart.chartType')+':'">
           <div class="chart-type-list">
             <span v-for="item in chartTypeList" :key="item.type" :class="{activedIcon :item.type===chartType, disabledIcon: !isUsable(item)}" @click="switchChartType(item)">
-              <el-tooltip :content="item.matchRule.desc" placement="top">
+              <el-tooltip :content="item.name +': '+item.matchRule.desc" placement="top">
                 <svg-icon class="icon" :icon-class="isUsable(item)? item.icon : (item.icon + '_disabled')" />
               </el-tooltip>
             </span>
@@ -16,6 +16,7 @@
     </div>
   </div>
 </template>
+
 <script>
 import lineChart from '@/widgets/lineChart'
 import DataTable from '@/widgets/DataTable'
@@ -25,7 +26,6 @@ import HorizontalBar from '@/widgets/horizontalBar'
 import PieChart from '@/widgets/PieChart'
 
 import chartTypeList from '@/utils/chartTypeList'
-import store from '../store'
 
 export default {
   components: { lineChart, DataTable, BarChart, StackBarChart, PieChart, HorizontalBar },
@@ -57,8 +57,14 @@ export default {
     }
   },
   computed: {
+    caculCols() {
+      return this.$store.state.chart.caculCols
+    },
+    dimensions() {
+      return this.$store.state.chart.dimensions
+    },
     allSelected() {
-      return store.state.caculCols.concat(store.state.dimensions)
+      return this.dimensions.concat(this.caculCols)
     },
     chartData() {
       return this.currentType.dataTransfer ? this.currentType.dataTransfer(this.data, this.schema) : this.data
@@ -71,7 +77,7 @@ export default {
     allSelected: {
       deep: true,
       handler() {
-        if (!this.currentType.matchRule.isUsable(store.state.dimensions, store.state.caculCols)) {
+        if (!this.currentType.matchRule.isUsable(this.dimensions, this.caculCols)) {
           this.$emit('update:chartType', 'table')
         }
       }
@@ -79,10 +85,10 @@ export default {
   },
   methods: {
     isUsable(chart) {
-      return chart.matchRule.isUsable(store.state.dimensions, store.state.caculCols)
+      return chart.matchRule.isUsable(this.dimensions, this.caculCols)
     },
     switchChartType(chart) {
-      if (!chart.matchRule.isUsable(store.state.dimensions, store.state.caculCols)) {
+      if (!chart.matchRule.isUsable(this.dimensions, this.caculCols)) {
         return
       }
       this.$emit('update:chartType', chart.type)
@@ -98,7 +104,8 @@ export default {
      width: 100%;
    }
    .chart-style-panel {
-     width: 250px;
+     width: 200px;
+     flex-shrink: 0;
      padding: 10px;
      .chart-type-list {
        width: 100%;

@@ -1,6 +1,6 @@
 <template>
   <div id="app">
-    <div v-if="token && showNavBar()" class="nav-bar">
+    <div v-if="username && showNavBar()" class="nav-bar">
       <el-menu
         :default-active="activeMenu"
         :router="true"
@@ -13,45 +13,57 @@
           <img src="./assets/logo-simple.png" style="height: 45px;">
         </el-menu-item>
         <el-menu-item index="/dashboard">
-          仪表盘
+          {{ $t('common.dashboard') }}
         </el-menu-item>
         <el-menu-item index="/chartpanel/create">
-          图表
+          {{ $t('common.chart') }}
+        </el-menu-item>
+        <el-menu-item index="/source">
+          {{ $t('common.dataSource') }}
         </el-menu-item>
       </el-menu>
-      <el-dropdown class="avatar-container right-menu-item" szie="mini" trigger="hover">
-        <div class="avatar-wrapper">
-          <img :src="avatar+'?imageView2/1/w/80/h/80'" class="user-avatar">
-        </div>
-        <el-dropdown-menu slot="dropdown">
-          <router-link to="/">
-            <el-dropdown-item>
-              首页
+      <div class="nav-bar-left">
+        <a class="nav-bar-link" target="_blank" href="https://github.com/dongsuo/vue-data-board">
+          Github
+        </a>
+        <a class="nav-bar-link" target="_blank" href="https://docs.vislib.best">
+          {{ $t('navbar.document') }}
+        </a>
+        <el-dropdown class="avatar-container right-menu-item" szie="mini" trigger="hover">
+          <div class="avatar-wrapper">
+            <img :src="avatar+'?imageView2/1/w/80/h/80'" class="user-avatar">
+          </div>
+          <el-dropdown-menu slot="dropdown">
+            <router-link to="/">
+              <el-dropdown-item>
+                {{ $t('navbar.home') }}
+              </el-dropdown-item>
+            </router-link>
+            <el-dropdown-item divided>
+              <span style="display:block;" @click="logout"> {{ $t('auth.logout') }}</span>
             </el-dropdown-item>
-          </router-link>
-          <el-dropdown-item divided>
-            <span style="display:block;" @click="logout">退出登录</span>
-          </el-dropdown-item>
-        </el-dropdown-menu>
-      </el-dropdown>
+          </el-dropdown-menu>
+        </el-dropdown>
+      </div>
     </div>
-
+    <i18n />
     <router-view />
   </div>
 </template>
 
 <script>
 import { mapGetters } from 'vuex'
+import i18n from '@/components/i18n'
 
 export default {
   name: 'App',
+  components: { i18n },
   computed: {
     ...mapGetters([
       'avatar',
-      'token'
+      'username'
     ]),
     defaultActive() {
-      console.log(this.$route.path)
       return this.$route.path
     },
     activeMenu() {
@@ -62,7 +74,7 @@ export default {
   },
   methods: {
     logout() {
-      this.$store.dispatch('FedLogOut').then(() => {
+      this.$store.dispatch('user/FedLogOut').then(() => {
         location.reload()// In order to re-instantiate the vue-router object to avoid bugs
       })
     },
@@ -97,12 +109,29 @@ a,a:hover {
   justify-content: space-between;
   height: 61px;
   border-bottom: 1px solid #EBEEF5;
+  align-items: center;
+  .nav-bar-left {
+      display: flex;
+      align-items: center;
+  }
+  .nav-bar-link {
+    display: inline-block;
+    padding: 0 22px;
+    height: 61px;
+    line-height: 61px;
+    text-align: center;
+    color: rgb(96, 98, 102);
+    font-size: 14px;
+    &:hover {
+      background-color: #ccc;
+    }
+  }
   .avatar-container {
     align-self: center;
-    margin-right: 15px;
     height: 100%;
     height: 45px;
     width: 45px;
+    margin: 0 22px;
     .avatar-wrapper {
       cursor: pointer;
       img {

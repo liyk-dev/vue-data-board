@@ -1,16 +1,15 @@
 <template>
-  <el-form-item label="排序">
+  <el-form-item :label="$t('chart.order')">
     <draggable v-model="orderByStrs" :group="{name: 'orderBy',pull: false, put: false}" style="display: inline-block;">
       <el-tag v-for="(item,index) in orderByStrs" :key="index" closable size="small" @close="handleCloseOrderBy">
         {{ item }}
       </el-tag>
     </draggable>
-    <el-cascader v-model="orderBy" :options="orderByOption" :disabled="orderByOption.length===0" size="mini" placeholder="选择排序方式" style="width: 120px;" @change="handleOrderByChange" />
+    <el-cascader v-model="orderBy" :options="orderByOption" :disabled="orderByOption.length===0" size="mini" :placeholder="$t('chart.selectOrderBy')" style="width: 150px;" @change="handleOrderByChange" />
   </el-form-item>
 </template>
 <script>
 import draggable from 'vuedraggable'
-import store from '../store'
 
 export default {
   components: { draggable },
@@ -26,15 +25,28 @@ export default {
     }
   },
   computed: {
+    caculCols() {
+      return this.$store.state.chart.caculCols
+    },
+    dimensions() {
+      return this.$store.state.chart.dimensions
+    },
     allSelected() {
-      return store.state.caculCols.concat(store.state.dimensions)
+      return this.dimensions.concat(this.caculCols)
     },
     orderByStrs: {
       set(value) {
         this.$emit('input', value)
       },
       get() {
-        return this.value
+        const orderByStrs = [...this.value]
+        orderByStrs.forEach((orderByStr, index) => {
+          const colName = orderByStr.split(' ')[0]
+          if (!this.allSelected.findIndex(col => col.Column === colName)) {
+            orderByStrs.splice(index, 1)
+          }
+        })
+        return orderByStrs
       }
     },
     orderByOption() {
@@ -44,32 +56,16 @@ export default {
           label: col.Column,
           children: [{
             value: 'desc',
-            label: '降序'
+            label: this.$t('chart.descend')
           }, {
             value: 'asc',
-            label: '升序'
+            label: this.$t('chart.ascend')
           }]
         }
       })
     }
   },
-  watch: {
-    'store.state.dimensions': function(value) {
-      this.watchHandler(value)
-    },
-    'store.state.caculCols': function(value) {
-      this.watchHandler(value)
-    }
-  },
   methods: {
-    watchHandler(cols) {
-      this.orderByStrs.forEach((orderByStr, index) => {
-        const colName = orderByStr.split(' ')[0]
-        if (!cols.findIndex(col => col.Column === colName)) {
-          this.orderByStrs.splice(index, 1)
-        }
-      })
-    },
     handleOrderByChange(value) {
       this.orderBy = []
       const index = this.orderByStrs.findIndex(orderBy => orderBy.indexOf(value[0]) >= 0)

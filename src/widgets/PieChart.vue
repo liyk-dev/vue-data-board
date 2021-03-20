@@ -65,15 +65,8 @@ export default {
         this.chart.resize()
       }
     },
-    validateData(data) {
-      if (!Array.isArray(data)) {
-        this.$message({
-          message: '线图的数据格式必须为数组，请检查你的数据格式'
-        })
-      }
-    },
     renderChart(data) {
-      if (!this.$refs.chart) return
+      if (!this.$refs.chart || !data[0]) return
       const legend = []
       let seriesObj = {}
       if (this.schema.filter(schema => schema.asxAxis).length === 0) {
@@ -148,15 +141,6 @@ export default {
           itemSize: 12,
           feature: {
             saveAsImage: {
-              show: true
-            },
-            magicType: {
-              type: ['line', 'bar']
-            },
-            restore: {
-              show: true
-            },
-            dataZoom: {
               show: true
             }
           }

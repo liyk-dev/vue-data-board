@@ -2,12 +2,12 @@
   <div v-loading="loading" class="container">
     <el-card body-style="padding: 0px;" class="dashboard-list" shadow="never">
       <div slot="header">
-        <span>仪表盘</span>
+        <span>{{ $t('common.dashboard') }}</span>
         <i class="el-icon-plus" @click="addDashboard" />
       </div>
       <ul>
         <draggable v-model="dashboardList" :group="{name: 'dashboard',pull: true}" class="draggable-wrapper" @change="handleOrderChange">
-          <li v-for="item in dashboardList" :key="item.objectId" :class="{'dashboard-list-item': true, 'high-light-dashboard': currentDashboard.objectId === item.objectId}">
+          <li v-for="item in dashboardList" :key="item.dashboard_id" :class="{'dashboard-list-item': true, 'high-light-dashboard': currentDashboard.dashboard_id === item.dashboard_id}">
             <span @click="switchDb(item)">
               <i class="el-icon-document" />
               <span>{{ item.name }}</span>
@@ -23,7 +23,7 @@
                     target: item
                   }"
                 >
-                  编辑
+                  {{ $t('common.edit') }}
                 </el-dropdown-item>
                 <el-dropdown-item
                   :command="{
@@ -31,7 +31,7 @@
                     target: item
                   }"
                 >
-                  删除
+                  {{ $t('common.delete') }}
                 </el-dropdown-item>
               </el-dropdown-menu>
             </el-dropdown>
@@ -41,18 +41,18 @@
       </ul>
     </el-card>
     <dashboardItem :dashboard="currentDashboard" mode="edit" />
-    <el-dialog title="编辑/新建看板" :visible.sync="editDialogVisible">
-      <el-form label-width="100px;">
-        <el-form-item label=" 看板名称：">
-          <el-input v-model="dbObj.name" size="small" style="width: 250px;" placeholder="请输入看板名称" />
+    <el-dialog :title="$t('dashboard.addOrEditDashboard')" width="750px" :visible.sync="editDialogVisible">
+      <el-form label-width="160px">
+        <el-form-item :label="$t('dashboard.dashboardName')">
+          <el-input v-model="dbObj.name" size="small" style="width: 450px;" :placeholder="$t('dashboard.dashboardNamePlaceholder')" />
         </el-form-item>
-        <el-form-item label=" 看板描述：">
-          <el-input v-model="dbObj.desc" size="small" style="width: 250px;" placeholder="请输入描述" />
+        <el-form-item :label="$t('dashboard.dashboardDesc')">
+          <el-input v-model="dbObj.desc" type="textarea" :rows="5" size="small" style="width: 450px;" :placeholder="$t('dashboard.dashboardDescPlaceholder')" />
         </el-form-item>
       </el-form>
       <span slot="footer" class="dialog-footer">
-        <el-button type="primary" size="small" @click="editDialogVisible = false">取消</el-button>
-        <el-button type="primary" size="small" @click="handleSubmit">确定</el-button>
+        <el-button type="primary" size="small" @click="editDialogVisible = false"> {{ $t('common.cancel') }}</el-button>
+        <el-button type="primary" size="small" @click="handleSubmit"> {{ $t('common.confirm') }}</el-button>
       </span>
     </el-dialog>
   </div>
@@ -83,28 +83,35 @@ export default {
       dashboardList().then(resp => {
         this.loading = false
         this.dashboardList = []
-        resp.data.order.forEach(id => {
-          this.dashboardList.push(resp.data.dashboards.find(item => item.objectId === id))
+        resp.data.order.forEach((id, index) => {
+          const itemIndex = resp.data.dashboards.findIndex(item => item.dashboard_id === id)
+          if (itemIndex >= 0) {
+            this.dashboardList.push(resp.data.dashboards[itemIndex])
+            resp.data.dashboards.splice(itemIndex, 1)
+          } else {
+            console.log(id, index)
+          }
         })
-        const dashboard = this.dashboardList.find(item => item.objectId === this.$route.query.id)
+        this.dashboardList = this.dashboardList.concat(resp.data.dashboards)
+        const dashboard = this.dashboardList.find(item => item.dashboard_id === this.$route.query.id)
         if (dashboard) {
           this.currentDashboard = dashboard
         } else {
           this.currentDashboard = this.dashboardList[0]
         }
         if (this.currentDashboard) {
-          this.$router.push(`/dashboard?id=${this.currentDashboard.objectId}`)
+          this.$router.push(`/dashboard?id=${this.currentDashboard.dashboard_id}`).catch(_ => {})
         }
       })
     },
     switchDb(db) {
-      if (db.objectId === this.currentDashboard.objectId) {
+      if (db.dashboard_id === this.currentDashboard.dashboard_id) {
         this.getList()
         return
       }
       // this.$confirm('确定要离开当前页面吗?系统可能不会保存您所做的更改。', '提示').then(() => {
       this.currentDashboard = db
-      this.$router.push(`/dashboard?id=${this.currentDashboard.objectId}`)
+      this.$router.push(`/dashboard?id=${this.currentDashboard.dashboard_id}`)
       // })
     },
     addDashboard() {
@@ -123,7 +130,7 @@ export default {
       }
     },
     handleSubmit() {
-      if (this.dbObj.objectId) {
+      if (this.dbObj.dashboard_id) {
         updateDashboard(this.dbObj).then(resp => {
           this.getList()
           this.editDialogVisible = false
@@ -137,19 +144,17 @@ export default {
     },
     handleOrderChange(evt) {
       const data = {
-        order: this.dashboardList.map(item => item.objectId)
+        order: this.dashboardList.map(item => item.dashboard_id)
       }
-      dbOrder(data).then(() => {
-        console.log('order')
-      })
+      dbOrder(data)
     },
     deleteDashboard(db) {
-      this.$confirm(`确定要删除${db.name}仪表盘吗？`, '提示').then(() => {
-        deleteDashboard({ id: db.objectId }).then(() => {
+      this.$confirm(this.$t('dashboard.deleteConfirm', db.name), this.$t('common.confirm')).then(() => {
+        deleteDashboard({ dashboard_id: db.dashboard_id }).then(() => {
           this.getList()
           this.$message({
             type: 'success',
-            message: '删除成功！'
+            message: this.$t('common.deleteSuccess')
           })
         })
       })
@@ -161,11 +166,11 @@ export default {
 <style lang="scss" scoped>
 .container {
   display: flex;
-  height: calc(100vh - 62px);
+  min-height: calc(100vh - 62px);
   align-items: stretch;
   .dashboard-list {
     width: 250px;
-    height: 100%;
+    min-height: 100%;
     padding: 20px 10px;
     /deep/ .el-card__header {
       div {
